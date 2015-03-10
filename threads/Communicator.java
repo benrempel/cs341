@@ -13,8 +13,6 @@ public class Communicator {
     /**
      * Allocate a new communicator.
      */
-	//Testing git
-	
     public Communicator() {
     }
 

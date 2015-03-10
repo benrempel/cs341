@@ -45,6 +45,7 @@ public class SynchList {
 	while (list.isEmpty()) {
 	    listEmpty.sleep();
 	}
+
 	o = list.removeFirst();
 	lock.release();
 
@@ -53,7 +54,6 @@ public class SynchList {
 
     private static class PingTest implements Runnable {
 	PingTest(SynchList ping, SynchList pong) {
-		System.out.println("SynchList RUnning");
 	    this.ping = ping;
 	    this.pong = pong;
 	}
