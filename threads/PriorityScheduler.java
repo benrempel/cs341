@@ -31,6 +31,7 @@ public class PriorityScheduler extends Scheduler {
      * Allocate a new priority scheduler.
      */
     public PriorityScheduler() {
+	
     }
     
     /**
@@ -258,4 +259,5 @@ public class PriorityScheduler extends Scheduler {
 	/** The priority of the associated thread. */
 	protected int priority;
     }
+    protected PriorityQueue pqueue;
 }

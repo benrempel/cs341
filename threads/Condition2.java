@@ -1,7 +1,6 @@
 package nachos.threads;
 
 import nachos.machine.*;
-
 import java.util.LinkedList;
 
 /**
@@ -21,6 +20,7 @@ public class Condition2 {
      *				variable. The current thread must hold this
      *				lock whenever it uses <tt>sleep()</tt>,
      *				<tt>wake()</tt>, or <tt>wakeAll()</tt>.
+     *				<tt>wake()</tt>ay.  Note that SynchList does not test the wakeAll functionality of cond, or <tt>wakeAll()</tt>.
      */
     public Condition2(Lock conditionLock) {
 	this.conditionLock = conditionLock;

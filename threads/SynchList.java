@@ -95,25 +95,16 @@ public class SynchList {
      * Test that this module is working.
      */
     public static void selfTest() {
-	/*SynchList ping = new SynchList();
-	SynchList pong = new SynchList();
-
-	new KThread(new PingTest(ping, pong)).setName("ping").fork();
-
-	for (int i=0; i<10; i++) {
-	    Integer o = new Integer(i);
-	    ping.add(o);
-	    Object stuffs = pong.removeFirst();
+/*	    Object stuffs = pong.removeFirst();
 	    System.out.println(stuffs);
 	    Lib.assertTrue(stuffs == o);
-	}*/
 	    SynchList addAllList = new SynchList();
 	    for (int i=1; i<5; i++)
 	        new KThread(new AddAllTest("Grabber test " + Integer.toString(i), addAllList)).setName("Grabber thread " + Integer.toString(i)).fork();
 	    System.out.println("We've added everything!");
 	    KThread.currentThread().yield(); // Make sure all of our GrabberTest threads get to call removeFirst() before we advance
 	    addAllList.addAll(new Integer(69), new Integer(3));
-	    KThread.currentThread().yield(); // Make sure all of our GrabberTest threads get to be woken up after our call to addAll
+	    KThread.currentThread().yield(); // Make sure all of our GrabberTest threads get to be woken up after our call to addAll*/
     }
 
     private LinkedList<Object> list;
