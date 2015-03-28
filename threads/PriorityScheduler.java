@@ -100,22 +100,29 @@ public class PriorityScheduler extends Scheduler {
     }
 
     public static void selfTest() {
-	System.out.println("AAAAAHHHHHH");
 	KThread thread1 = new KThread(new PriorityTest()).setName("thread1");
+	System.out.println("Created thread 1");
 	thread1.fork();
 	boolean intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread1, 1);
+	ThreadedKernel.scheduler.setPriority(thread1, 3);
 	Machine.interrupt().restore(intStatus);
-	System.out.println("asdfasdfasdfasdf");
 	KThread thread2 = new KThread(new PriorityTest()).setName("thread2");
+	System.out.println("Created thread 2");
 	thread2.fork();
 	intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread2, 2);
+	ThreadedKernel.scheduler.setPriority(thread2, 4);
 	Machine.interrupt().restore(intStatus);
 	KThread thread3 = new KThread(new PriorityTest()).setName("thread3");
+	System.out.println("Created thread 3");
 	thread3.fork();
 	intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread3, 1);
+	ThreadedKernel.scheduler.setPriority(thread3, 5);
+	Machine.interrupt().restore(intStatus);
+	KThread thread4 = new KThread(new PriorityTest()).setName("thread4");
+	System.out.println("Created thread 4");
+	thread4.fork();
+	intStatus = Machine.interrupt().disable();
+	ThreadedKernel.scheduler.setPriority(thread4, 6);
 	Machine.interrupt().restore(intStatus);
 	for (int i = 0; i < 15; i++) {
 		KThread.currentThread().yield();
@@ -125,10 +132,8 @@ public class PriorityScheduler extends Scheduler {
     public static class PriorityTest implements Runnable {
 	public void run() {
 		System.out.println("Starting " + KThread.currentThread().getName());
-		while (true) {
-			System.out.println(KThread.currentThread().getName());
-		}
-	//	System.out.println("Ending " + KThread.currentThread().getName());
+		KThread.currentThread().yield();
+		System.out.println("Ending " + KThread.currentThread().getName());
 	}
     }
 
@@ -165,10 +170,15 @@ public class PriorityScheduler extends Scheduler {
 	PriorityQueue(boolean transferPriority) {
 	    this.transferPriority = transferPriority;
 	}
+	
+	public void remove(Object o) {
+	    waitQueue.remove(o);
+	}
 
 	public void waitForAccess(KThread thread) {
 	    Lib.assertTrue(Machine.interrupt().disabled());
 	    getThreadState(thread).waitForAccess(this);
+	    this.print();
 	}
 
 	public void acquire(KThread thread) {
@@ -217,7 +227,10 @@ public class PriorityScheduler extends Scheduler {
 			if (o1.getEffectivePriority() > o2.getEffectivePriority()) {
 				return -1;
 			}
-			return 0;
+			if (o1.getTime() < o2.getTime()) {
+				return -1;
+			}
+			return 1;
 		}
 
 	};
@@ -244,7 +257,12 @@ public class PriorityScheduler extends Scheduler {
 	public ThreadState(KThread thread) {
 	    this.thread = thread;
 	    this.addTime = Machine.timer().getTime();
+	    this.queuething = new PriorityQueue(false);
 	    setPriority(priorityDefault);
+	}
+
+	public String toString() {
+		return this.thread.getName() + " (" + this.priority + ")";
 	}
 
 	/**
@@ -274,9 +292,10 @@ public class PriorityScheduler extends Scheduler {
 	public void setPriority(int priority) {
 	    if (this.priority == priority)
 		return;
-	    
+	    queuething.remove(this);
 	    this.priority = priority;
-	    
+	    queuething.offer(this);
+	    queuething.print();	    
 	}
 
 	/**
@@ -292,7 +311,10 @@ public class PriorityScheduler extends Scheduler {
 	 * @see	nachos.threads.ThreadQueue#waitForAccess
 	 */
 	public void waitForAccess(PriorityQueue waitQueue) {
+	    queuething = waitQueue;
+	    this.addTime = Machine.timer().getTime();
 	    waitQueue.offer(this);
+	    System.out.println(this.thread.getName() + " added to queue");
 	}
 
 	/**
@@ -308,12 +330,15 @@ public class PriorityScheduler extends Scheduler {
 	public void acquire(PriorityQueue waitQueue) {
 	    // implement me
 	}	
-
+	public float getTime() {
+	    return this.addTime;
+	}
 	/** The thread with which this object is associated. */	   
 	protected KThread thread;
 	/** The priority of the associated thread. */
 	protected int priority;
 	protected float addTime;
+	protected PriorityQueue queuething;
     }
     static final int INITSIZE = 10;
 }
