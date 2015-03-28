@@ -99,36 +99,24 @@ public class PriorityScheduler extends Scheduler {
 	return true;
     }
 
-    public static void selfTest() {
-	System.out.println("AAAAAHHHHHH");
+    public void selfTest() {
 	KThread thread1 = new KThread(new PriorityTest()).setName("thread1");
 	thread1.fork();
-	boolean intStatus = Machine.interrupt().disable();
 	ThreadedKernel.scheduler.setPriority(thread1, 1);
-	Machine.interrupt().restore(intStatus);
-	System.out.println("asdfasdfasdfasdf");
 	KThread thread2 = new KThread(new PriorityTest()).setName("thread2");
 	thread2.fork();
-	intStatus = Machine.interrupt().disable();
 	ThreadedKernel.scheduler.setPriority(thread2, 2);
-	Machine.interrupt().restore(intStatus);
 	KThread thread3 = new KThread(new PriorityTest()).setName("thread3");
 	thread3.fork();
-	intStatus = Machine.interrupt().disable();
 	ThreadedKernel.scheduler.setPriority(thread3, 1);
-	Machine.interrupt().restore(intStatus);
-	for (int i = 0; i < 15; i++) {
-		KThread.currentThread().yield();
-	}
     }
 
-    public static class PriorityTest implements Runnable {
+    public class PriorityTest implements Runnable {
 	public void run() {
-		System.out.println("Starting " + KThread.currentThread().getName());
-		while (true) {
-			System.out.println(KThread.currentThread().getName());
+		System.out.println("Starting " + KThread.currentThread.getName());
+		for (int i = 0; i < 2347021; i++) {
 		}
-	//	System.out.println("Ending " + KThread.currentThread().getName());
+		System.out.println("Ending " + KThread.currentThread.getName());
 	}
     }
 
@@ -178,7 +166,7 @@ public class PriorityScheduler extends Scheduler {
 
 	public KThread nextThread() {
 	    Lib.assertTrue(Machine.interrupt().disabled());
-	    return waitQueue.poll().thread;
+	    return waitQueue.poll();
 	}
 
 	public void offer(ThreadState thread) {
@@ -198,7 +186,7 @@ public class PriorityScheduler extends Scheduler {
 	
 	public void print() {
 	    Lib.assertTrue(Machine.interrupt().disabled());
-	    System.out.println(waitQueue.toString());
+	    waitQueue.print();
 	}
 
 	/**
@@ -206,24 +194,22 @@ public class PriorityScheduler extends Scheduler {
 	 * threads to the owning thread.
 	 */
 	public boolean transferPriority;
+	private java.util.PriorityQueue<ThreadState> waitQueue = new java.util.PriorityQueue<ThreadState>(INITSIZE, comparator);
    
 	Comparator<ThreadState> comparator = new Comparator<ThreadState>() {
 		
 		@Override
 		public int compare(ThreadState o1, ThreadState o2) {
-			if (o1.getEffectivePriority() < o2.getEffectivePriority()) {
+			if (o1.getEffectivePriority() < o2.getEffectivePriority) {
 				return 1;
 			}
-			if (o1.getEffectivePriority() > o2.getEffectivePriority()) {
+			if (o1.getEffectivePriority() > o2.getEffectivePriority) {
 				return -1;
 			}
 			return 0;
 		}
 
 	};
-
-	
-	private java.util.PriorityQueue<ThreadState> waitQueue = new java.util.PriorityQueue<ThreadState>(INITSIZE, comparator);
 	
      }
 

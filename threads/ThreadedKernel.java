@@ -46,14 +46,14 @@ public class ThreadedKernel extends Kernel {
      * tests here.
      */	
     public void selfTest() {
-	KThread.selfTest();
-	Semaphore.selfTest();
+	//KThread.selfTest();
+	//Semaphore.selfTest();
 //	SynchList.selfTest();
+	PriorityScheduler.selfTest();
 	if (Machine.bank() != null) {
 	    ElevatorBank.selfTest();
 	}
-
-   	System.out.println("This line of code should be run.");    
+   	/*System.out.println("This line of code should be run.");    
    	Communicator cmator = new Communicator();
    	KThread speak_thread = new KThread(new SpeakTest(cmator)).setName("speak_thread");
    	KThread listen_thread = new KThread(new ListenTest(cmator)).setName("listen_thread");
@@ -74,7 +74,7 @@ public class ThreadedKernel extends Kernel {
 	KThread.currentThread().yield();
 	KThread.currentThread().yield();
 	System.out.println("This line of code should also be run.");
-	
+	*/
     }
     
     /**
