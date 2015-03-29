@@ -124,9 +124,7 @@ public class PriorityScheduler extends Scheduler {
 	intStatus = Machine.interrupt().disable();
 	ThreadedKernel.scheduler.setPriority(thread4, 6);
 	Machine.interrupt().restore(intStatus);
-	for (int i = 0; i < 15; i++) {
-		KThread.currentThread().yield();
-	}
+	KThread.currentThread().yield();
     }
 
     public static class PriorityTest implements Runnable {
@@ -178,7 +176,6 @@ public class PriorityScheduler extends Scheduler {
 	public void waitForAccess(KThread thread) {
 	    Lib.assertTrue(Machine.interrupt().disabled());
 	    getThreadState(thread).waitForAccess(this);
-	    this.print();
 	}
 
 	public void acquire(KThread thread) {
@@ -295,7 +292,6 @@ public class PriorityScheduler extends Scheduler {
 	    queuething.remove(this);
 	    this.priority = priority;
 	    queuething.offer(this);
-	    queuething.print();	    
 	}
 
 	/**
