@@ -200,7 +200,7 @@ public class KThread {
 
 	KThread oldthread = currentThread.oldThreadQ.nextThread();
 	if (oldthread != null) {
-		ThreadedKernel.scheduler.getThreadState(currentThread).acquire(currentThread.getOldThreadQ());
+		currentThread.oldThreadQ.acquire(currentThread);
 		oldthread.ready();
 	}
 	
