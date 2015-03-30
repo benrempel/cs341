@@ -325,7 +325,7 @@ public class PriorityScheduler extends Scheduler {
 	 * @see	nachos.threads.ThreadQueue#nextThread
 	 */
 	public void acquire(PriorityQueue waitQueue) {
-	    KThread oldthread = thread.oldThreadQ.nextThread();
+	    KThread oldthread = thread.getOldThreadQ().nextThread();
 	    if (oldthread != null) {
 		if (priority < ThreadedKernel.scheduler.getEffectivePriority(oldthread)) {
 		    effectivePriority = ThreadedKernel.scheduler.getEffectivePriority(oldthread);
