@@ -46,7 +46,7 @@ public class KThread {
     public KThread() {
 	if (currentThread != null) {
 	    tcb = new TCB();
-	    oldThread = null;
+	    oldThreadQ = ThreadedKernel.scheduler.newThreadQueue(false);
 	}	    
 	else {
 	    readyQueue = ThreadedKernel.scheduler.newThreadQueue(false);
@@ -54,7 +54,7 @@ public class KThread {
 
 	    currentThread = this;
 	    tcb = TCB.currentTCB();
-	    oldThread = null;
+	    oldThreadQ = ThreadedKernel.scheduler.newThreadQueue(false);
 	    name = "main";
 	    restoreState();
 
@@ -194,8 +194,11 @@ public class KThread {
 	Lib.assertTrue(toBeDestroyed == null);
 	toBeDestroyed = currentThread;
 
-	if (currentThread.oldThread != null)
-		currentThread.oldThread.ready();
+	KThread oldthread = currentThread.oldThreadQ.nextThread();
+	if (oldthread != null) {
+		oldThreadQ.acquire(this);
+		oldthread.ready();
+	}
 	
 	currentThread.status = statusFinished;
 	
@@ -285,8 +288,11 @@ public class KThread {
 	if (this.status == statusFinished)
 	    return;
 	//else
-	this.oldThread = currentThread;
 	boolean intStatus = Machine.interrupt().disable();
+	//ADDING SHIT HERE
+	this.oldThreadQ.waitForAccess(currentThread);
+	oldThreadQ.acquire(this);
+	//NO MORE SHIT
 	currentThread.sleep();
 	Machine.interrupt().restore(intStatus);
     }
@@ -470,7 +476,7 @@ public class KThread {
     private String name = "(unnamed thread)";
     private Runnable target;
     private TCB tcb;
-    private KThread oldThread;
+    private ThreadQueue oldThreadQ;
 
     /**
      * Unique identifer for this thread. Used to deterministically compare

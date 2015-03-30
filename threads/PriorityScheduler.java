@@ -256,6 +256,7 @@ public class PriorityScheduler extends Scheduler {
 	    this.addTime = Machine.timer().getTime();
 	    this.queuething = new PriorityQueue(false);
 	    setPriority(priorityDefault);
+	    effectivePriority = priority;
 	}
 
 	public String toString() {
@@ -277,8 +278,7 @@ public class PriorityScheduler extends Scheduler {
 	 * @return	the effective priority of the associated thread.
 	 */
 	public int getEffectivePriority() {
-	    // implement me
-	    return priority;
+	    return effectivePriority;
 	}
 
 	/**
@@ -287,8 +287,9 @@ public class PriorityScheduler extends Scheduler {
 	 * @param	priority	the new priority.
 	 */
 	public void setPriority(int priority) {
-	    if (this.priority == priority)
+	    if (this.priority == priority) {
 		return;
+	    }
 	    queuething.remove(this);
 	    this.priority = priority;
 	    queuething.offer(this);
@@ -324,8 +325,16 @@ public class PriorityScheduler extends Scheduler {
 	 * @see	nachos.threads.ThreadQueue#nextThread
 	 */
 	public void acquire(PriorityQueue waitQueue) {
-	    // implement me
-	}	
+	    KThread oldthread = thread.oldThreadQ.nextThread();
+	    if (oldthread != null) {
+		if (priority < ThreadedKernel.scheduler.getEffectivePriority(oldthread)) {
+		    effectivePriority = ThreadedKernel.scheduler.getEffectivePriority(oldthread);
+		    return;
+		}
+	    }
+	    effectivePriority = priority;
+	}
+
 	public float getTime() {
 	    return this.addTime;
 	}
@@ -335,6 +344,8 @@ public class PriorityScheduler extends Scheduler {
 	protected int priority;
 	protected float addTime;
 	protected PriorityQueue queuething;
+	protected int effectivePriority;
+	
     }
     static final int INITSIZE = 10;
 }
