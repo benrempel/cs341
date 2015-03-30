@@ -185,6 +185,9 @@ public class PriorityScheduler extends Scheduler {
 
 	public KThread nextThread() {
 	    Lib.assertTrue(Machine.interrupt().disabled());
+	    if (waitQueue.isEmpty()) {
+		return null;
+	    }
 	    return waitQueue.poll().thread;
 	}
 
