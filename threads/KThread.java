@@ -44,9 +44,9 @@ public class KThread {
      * create an idle thread as well.
      */
     public KThread() {
+	oldThreadQ = ThreadedKernel.scheduler.newThreadQueue(false);
 	if (currentThread != null) {
 	    tcb = new TCB();
-	    oldThreadQ = ThreadedKernel.scheduler.newThreadQueue(false);
 	}	    
 	else {
 	    readyQueue = ThreadedKernel.scheduler.newThreadQueue(false);
@@ -54,7 +54,6 @@ public class KThread {
 
 	    currentThread = this;
 	    tcb = TCB.currentTCB();
-	    oldThreadQ = ThreadedKernel.scheduler.newThreadQueue(false);
 	    name = "main";
 	    restoreState();
 
@@ -198,11 +197,15 @@ public class KThread {
 	Lib.assertTrue(toBeDestroyed == null);
 	toBeDestroyed = currentThread;
 
-	KThread oldthread = currentThread.oldThreadQ.nextThread();
+	currentThread.getOldThreadQ().print();
+	KThread oldthread = currentThread.getOldThreadQ().nextThread();
 	if (oldthread != null) {
+		//currentThread.oldThreadQ.waitForAccess(oldthread);
 		currentThread.oldThreadQ.acquire(currentThread);
 		oldthread.ready();
 	}
+	
+	currentThread.oldThreadQ.nextThread();
 	
 	currentThread.status = statusFinished;
 	
@@ -272,8 +275,10 @@ public class KThread {
 	Lib.assertTrue(status != statusReady);
 	
 	status = statusReady;
-	if (this != idleThread)
+	if (this != idleThread) {
 	    readyQueue.waitForAccess(this);
+//	    System.out.println(getName() + " got readied and stuffs");
+	}
 	
 	Machine.autoGrader().readyThread(this);
     }
@@ -286,6 +291,7 @@ public class KThread {
      */
     public void join() {
 	Lib.debug(dbgThread, "Joining to thread: " + toString());
+	System.out.println("Joining to thread: " + toString());
 
 	Lib.assertTrue(this != currentThread);
 	
@@ -293,10 +299,11 @@ public class KThread {
 	    return;
 	//else
 	boolean intStatus = Machine.interrupt().disable();
-	//ADDING SHIT HERE
 	this.oldThreadQ.waitForAccess(currentThread);
+	System.out.println(getName() + " added " + currentThread.getName() + " to its oldthreadq");
+//	oldThreadQ.print();
 	oldThreadQ.acquire(this);
-	//NO MORE SHIT
+//	oldThreadQ.print();
 	currentThread.sleep();
 	Machine.interrupt().restore(intStatus);
     }
