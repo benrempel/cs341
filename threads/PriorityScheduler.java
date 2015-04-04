@@ -104,25 +104,31 @@ public class PriorityScheduler extends Scheduler {
 	System.out.println("Created thread 1");
 	thread1.fork();
 	boolean intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread1, 3);
+
+	ThreadedKernel.scheduler.setPriority(thread1, 2);
 	Machine.interrupt().restore(intStatus);
-	KThread thread2 = new KThread(new PriorityTest()).setName("thread2");
+	KThread thread2 = new KThread(new JoinTest(thread1)).setName("thread2");
 	System.out.println("Created thread 2");
 	thread2.fork();
 	intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread2, 4);
+	ThreadedKernel.scheduler.setPriority(thread2, 6);
+
 	Machine.interrupt().restore(intStatus);
 	KThread thread3 = new KThread(new PriorityTest()).setName("thread3");
 	System.out.println("Created thread 3");
 	thread3.fork();
 	intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread3, 5);
+
+	ThreadedKernel.scheduler.setPriority(thread3, 3);
+
 	Machine.interrupt().restore(intStatus);
 	KThread thread4 = new KThread(new PriorityTest()).setName("thread4");
 	System.out.println("Created thread 4");
 	thread4.fork();
 	intStatus = Machine.interrupt().disable();
-	ThreadedKernel.scheduler.setPriority(thread4, 6);
+
+	ThreadedKernel.scheduler.setPriority(thread4, 4);
+
 	Machine.interrupt().restore(intStatus);
 	KThread.currentThread().yield();
     }
@@ -134,6 +140,22 @@ public class PriorityScheduler extends Scheduler {
 		System.out.println("Ending " + KThread.currentThread().getName());
 	}
     }
+
+
+    public static class JoinTest implements Runnable {
+	
+	public JoinTest(KThread thread) {
+	    joinee = thread;
+	}
+
+	public void run() {
+	    System.out.println("Starting " + KThread.currentThread().getName());
+	    joinee.join();
+	    System.out.println("Ending " + KThread.currentThread().getName());
+	}
+	KThread joinee;
+    }
+
 
     /**
      * The default priority for a new thread. Do not change this value.
@@ -263,7 +285,9 @@ public class PriorityScheduler extends Scheduler {
 	}
 
 	public String toString() {
-		return this.thread.getName() + " (" + this.priority + ")";
+
+		return this.thread.getName() + " (" + this.effectivePriority + ")";
+
 	}
 
 	/**
@@ -281,6 +305,11 @@ public class PriorityScheduler extends Scheduler {
 	 * @return	the effective priority of the associated thread.
 	 */
 	public int getEffectivePriority() {
+
+	    if (effectivePriority < priority) {
+		effectivePriority = priority;
+	    }
+
 	    return effectivePriority;
 	}
 
@@ -291,11 +320,23 @@ public class PriorityScheduler extends Scheduler {
 	 */
 	public void setPriority(int priority) {
 	    if (this.priority == priority) {
+
+		if (effectivePriority < priority) {
+		    effectivePriority = priority;
+		}
+	//	queuething.print();
+
 		return;
 	    }
 	    queuething.remove(this);
 	    this.priority = priority;
+
+	    if (effectivePriority < priority) {
+		effectivePriority = priority;
+	    }
 	    queuething.offer(this);
+	  //  queuething.print();
+
 	}
 
 	/**
@@ -315,6 +356,9 @@ public class PriorityScheduler extends Scheduler {
 	    this.addTime = Machine.timer().getTime();
 	    waitQueue.offer(this);
 	    System.out.println(this.thread.getName() + " added to queue");
+
+	    //waitQueue.print();
+
 	}
 
 	/**
@@ -328,10 +372,17 @@ public class PriorityScheduler extends Scheduler {
 	 * @see	nachos.threads.ThreadQueue#nextThread
 	 */
 	public void acquire(PriorityQueue waitQueue) {
+
+	    System.out.println("asdfasdfasdfasdf");
 	    KThread oldthread = thread.getOldThreadQ().nextThread();
 	    if (oldthread != null) {
+		thread.getOldThreadQ().waitForAccess(oldthread);
 		if (priority < ThreadedKernel.scheduler.getEffectivePriority(oldthread)) {
 		    effectivePriority = ThreadedKernel.scheduler.getEffectivePriority(oldthread);
+		    System.out.println(thread.getName() + " got donated priority " + effectivePriority);
+		    queuething.remove(this);
+		    queuething.offer(this);
+
 		    return;
 		}
 	    }
@@ -341,6 +392,7 @@ public class PriorityScheduler extends Scheduler {
 	public float getTime() {
 	    return this.addTime;
 	}
+
 	/** The thread with which this object is associated. */	   
 	protected KThread thread;
 	/** The priority of the associated thread. */
