@@ -355,7 +355,7 @@ public class PriorityScheduler extends Scheduler {
 	    queuething = waitQueue;
 	    this.addTime = Machine.timer().getTime();
 	    waitQueue.offer(this);
-	    System.out.println(this.thread.getName() + " added to queue");
+	    //System.out.println(this.thread.getName() + " added to queue");
 
 	    //waitQueue.print();
 
@@ -373,13 +373,13 @@ public class PriorityScheduler extends Scheduler {
 	 */
 	public void acquire(PriorityQueue waitQueue) {
 
-	    System.out.println("asdfasdfasdfasdf");
+	    //System.out.println("asdfasdfasdfasdf");
 	    KThread oldthread = thread.getOldThreadQ().nextThread();
 	    if (oldthread != null) {
 		thread.getOldThreadQ().waitForAccess(oldthread);
 		if (priority < ThreadedKernel.scheduler.getEffectivePriority(oldthread)) {
 		    effectivePriority = ThreadedKernel.scheduler.getEffectivePriority(oldthread);
-		    System.out.println(thread.getName() + " got donated priority " + effectivePriority);
+		    //System.out.println(thread.getName() + " got donated priority " + effectivePriority);
 		    queuething.remove(this);
 		    queuething.offer(this);
 
