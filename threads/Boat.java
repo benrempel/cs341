@@ -3,7 +3,18 @@ import nachos.ag.BoatGrader;
 
 public class Boat
 {
+    static final int NO_PILOT = 0;
+    static final int ADULT_PILOT = 1;
+    static final int CHILD_PILOT = 2;
+    
     static BoatGrader bg;
+    static boolean boatO; //if false, assume boat on Molokai
+    static int pilot;
+    static boolean rider;
+    static int adultsO;
+    static int adultsM;
+    static int childrenO;
+    static int childrenM;
     
     public static void selfTest()
     {
@@ -26,19 +37,41 @@ public class Boat
 	bg = b;
 
 	// Instantiate global variables here
+	boatO = true;
+	pilot = NO_PILOT;
+	rider = false;
+	adultsO = 0;
+	adultsM = 0;
+	childrenO = 0;
+	childrenM = 0;
+	
 	
 	// Create threads here. See section 3.4 of the Nachos for Java
 	// Walkthrough linked from the projects page.
-
-	Runnable r = new Runnable() {
-	    public void run() {
-                SampleItinerary();
-            }
-        };
-        KThread t = new KThread(r);
-        t.setName("Sample Boat Thread");
-        t.fork();
-
+	
+	for (int i=0; i<adults; i++){
+	    Runnable r = new Runnable() {
+		public void run() {
+		    AdultItinerary();
+		}
+	    };
+	    KThread t = new KThread(r);
+	    t.setName("Adult Thread " + i);
+	    adultsO++;
+	    t.fork();
+	}
+	
+	for (int i=0; i<children; i++){
+	    Runnable r = new Runnable() {
+		public void run() {
+		    ChildItinerary();
+		}
+	    };
+	    KThread t = new KThread(r);
+	    t.setName("Child Thread " + i);
+	    childrenO++;
+	    t.fork();
+	}
     }
 
     static void AdultItinerary()
@@ -49,6 +82,9 @@ public class Boat
 	       bg.AdultRowToMolokai();
 	   indicates that an adult has rowed the boat across to Molokai
 	*/
+	
+	
+	
     }
 
     static void ChildItinerary()
