@@ -17,6 +17,7 @@ public class Boat
     static Lock l1;
 //    static Condition boatCapacity;
     static Condition pilot;
+    static Condition boatEmpty;
     static Condition boatAtO;
     static Condition boatAtM;
 
@@ -26,42 +27,58 @@ public class Boat
 	BoatGrader b = new BoatGrader();
 	
 	System.out.println("\n ***Testing Boats with only 2 children***");
-	begin(0, 10, b);
-	for (int i=0; i<30; i++){
+	begin(0, 2, b);
+	for (int i=0; i<10; i++){
 	    KThread.currentThread().yield();
 	}
 
-//	System.out.println("\n ***Testing Boats with 2 children, 1 adult***");
-//  	begin(1, 2, b);
+	System.out.println("\n ***Testing Boats with only 1 children***");
+	begin(0, 1, b);
+	for (int i=0; i<10; i++){
+	    KThread.currentThread().yield();
+	}
 
-//  	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
-//  	begin(3, 3, b);
+	System.out.println("\n ***Testing Boats with 2 children, 1 adult***");
+  	begin(1, 2, b);
+	for (int i=0; i<10; i++){
+	    KThread.currentThread().yield();
+	}
+	
+	System.out.println("\n ***Testing Boats with only 1 adult***");
+	begin(1, 0, b);
+	for (int i=0; i<10; i++){
+	    KThread.currentThread().yield();
+	}
+
+  	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
+  	begin(3, 3, b);
+	for (int i=0; i<40; i++){
+	    KThread.currentThread().yield();
+	}
+	
+	System.out.println("\n ***Testing Boats with 2 children, 10 adults***");
+	begin(10, 2, b);
+	for (int i=0; i<400; i++){
+	    KThread.currentThread().yield();
+	}
     }
 
     public static void begin( int adults, int children, BoatGrader b )
     {
-	// Store the externally generated autograder in a class
-	// variable to be accessible by children.
 	bg = b;
 
-	// Instantiate global variables here
 	adultsO = 0;
 	adultsM = 0;
 	childrenO = 0;
 	childrenM = 0;
-	
 	doneReported = false;
 	count = 0;
 	boatO = true;
 	l1 = new Lock();
-//	boatCapacity = new Condition(l1);
 	pilot = new Condition(l1);
+	boatEmpty = new Condition(l1);
 	boatAtO = new Condition(l1);
 	boatAtM = new Condition(l1);
-	
-	
-	// Create threads here. See section 3.4 of the Nachos for Java
-	// Walkthrough linked from the projects page.
 	
 	for (int i=0; i<adults; i++){
 	    Runnable r = new Runnable() {
@@ -86,74 +103,87 @@ public class Boat
 	    childrenO++;
 	    t.fork();
 	    
-	System.out.println("finished begin");
 	}
     }
 
     static void AdultItinerary()
     {
-	/* This is where you should put your solutions. Make calls
-	   to the BoatGrader to show that it is synchronized. For
-	   example:
-	       bg.AdultRowToMolokai();
-	   indicates that an adult has rowed the boat across to Molokai
-	*/
+	boolean OahuIsEmpty = false;
+	l1.acquire();
+	    
+	while (!boatO || childrenO > 1){
+	    boatAtO.sleep();
+	}
+	//System.out.print(KThread.currentThread().getName() + "  ");
+	bg.AdultRowToMolokai();
+	//remember how many people were left
+	if (childrenO+adultsO == count){
+	    OahuIsEmpty = true;
+	}
+	//GO TO MOLOKAI...
+	boatO=false;
 	
-	//bg.AdultRowToMolokai();
-	//on Molokai
-	
-	//sleep until everyone arrives
-	
+	adultsO--;
+	adultsM++;
+	if (OahuIsEmpty){
+	    doneReported = true;
+	}
+	boatAtM.wakeAll();
+	l1.release();
     }
 
     static void ChildItinerary()
     {
-	System.out.println("child started");
 	boolean inOahu = true;
 	boolean OahuIsEmpty = false;
 	while(!doneReported)
 	{
-	    //on Oahu
 	    l1.acquire();
-	    while (!boatO){
-		boatAtO.sleep();
+	    if (inOahu){
+		while (!boatO || (childrenO==1 && adultsO>0)){
+		    boatAtO.sleep();
+		}
+		if (count==1 || childrenO+adultsO==1){
+		    count++;
+		    //System.out.print(KThread.currentThread().getName() + "  ");
+		    bg.ChildRowToMolokai();
+		    //remember how many people were left
+		    if (childrenO+adultsO == count){
+			OahuIsEmpty = true;
+		    }
+		    //GO TO MOLOKAI...
+		    boatO=false;
+		    pilot.wake();
+		}
+		else{
+		    count++;
+		    pilot.sleep();
+		    //System.out.print(KThread.currentThread().getName() + "  ");
+		    bg.ChildRideToMolokai();
+		}
+		
+		inOahu = false;
+		count--;
+		childrenO--;
+		childrenM++;
+		if (OahuIsEmpty){
+		    doneReported = true;
+		}
+		if (count==1){
+		    boatEmpty.sleep();
+		    boatAtM.wakeAll();
+		}
+		else{
+		    boatEmpty.wake();
+		}
 	    }
-	//    while (count == 2) {
-	//	boatCapacity.sleep();
-	//    }
-	    if (count==1){ //OR no other children
-		count++;
-		bg.ChildRowToMolokai();
-		//GO TO MOLOKAI...
-		boatO=false;
-		pilot.wake();
-	    }
-	    else{ //count==0 AND there are other children
-		count++;
-		pilot.sleep();
-		bg.ChildRideToMolokai();
-	    }
-	    if (childrenO+adultsO == count){
-		OahuIsEmpty = true;
-	    }
-	    //WE'RE ON MOLOKAI!
-	    inOahu = false;
-	    count--;
-	    childrenO--;
-	    childrenM++;
-	    if (OahuIsEmpty){
-		doneReported = true;
-	    }
-	    boatAtM.wakeAll();
 	    
-	    while(!doneReported){
-		while (boatO){
+	    if (!inOahu){
+		while (boatO || count > 0){
 		    boatAtM.sleep();
 		}
 		if (!doneReported){
-		    //while (count == 1){
-		    //	boatCapacity.sleep();
-		    //}
+		    //System.out.print(KThread.currentThread().getName() + "  ");
 		    bg.ChildRowToOahu();
 		    inOahu = true;
 		    boatO=true;
@@ -162,11 +192,8 @@ public class Boat
 		    boatAtO.wakeAll();
 		}
 	    }
-	    //finish
 	    l1.release();
 	}
-	
-	
     }
 
     static void SampleItinerary()
