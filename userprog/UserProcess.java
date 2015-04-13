@@ -346,6 +346,44 @@ public class UserProcess {
 	return 0;
     }
 
+    /**
+    * Handle the creat() system call.
+    */
+    private int handleCreat(int strptr) {
+	String name = readVirtualMemoryString(strptr,256);
+	OpenFile file =	Machine.stubFileSystem().open(name, true);
+	if (file == null) {
+	    return -1;
+	}
+	else {
+	    return strptr;
+	}
+    }
+
+    private int handleOpen(int strptr) {
+	String name = readVirtualMemoryString(strptr, 256);
+	OpenFile file = Machine.stubFileSystem().open(name, false);
+	if (file == null) {
+	    return -1;
+	}
+	else {
+	    return strptr;
+	}
+    }
+
+    private int handleRead(int fileDescriptor, int bufptr, int count) {
+	String filename = readVirtualMemoryString(fileDescriptor, 256);
+	int realcount = 0;
+	byte[] buffer = new byte[count]
+	OpenFile file = Machine.stubFileSystem().open(filename, false)
+	if (file == null) {
+	    return -1;
+	}
+	for (int i = 0; i < count; i++) {
+	    file.read(i, buffer, i, 1);
+	}
+	writeVirtualMemory(bufptr, buffer, 0, count);
+    }
 
     private static final int
         syscallHalt = 0,
@@ -392,6 +430,8 @@ public class UserProcess {
 	case syscallHalt:
 	    return handleHalt();
 
+	case syscallCreat:
+	    return handleCreat(a0);	
 
 	default:
 	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
