@@ -23,10 +23,15 @@ public class UserProcess {
      * Allocate a new process.
      */
     public UserProcess() {
+	fileTable = new OpenFile[16];
+	fileTable[0] = UserKernel.console.openForReading();
+	fileTable[1] = UserKernel.console.openForWriting();
 	int numPhysPages = Machine.processor().getNumPhysPages();
 	pageTable = new TranslationEntry[numPhysPages];
-	for (int i=0; i<numPhysPages; i++)
+	for (int i=0; i<numPhysPages; i++) {
 	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
+	}
+	
     }
     
     /**
@@ -339,7 +344,6 @@ public class UserProcess {
      * Handle the halt() system call. 
      */
     private int handleHalt() {
-
 	Machine.halt();
 	
 	Lib.assertNotReached("Machine.halt() did not halt machine!");
@@ -351,38 +355,128 @@ public class UserProcess {
     */
     private int handleCreat(int strptr) {
 	String name = readVirtualMemoryString(strptr,256);
-	OpenFile file =	Machine.stubFileSystem().open(name, true);
-	if (file == null) {
-	    return -1;
+	int index = findFile(name);
+	if (index != -1) {
+	    return index;
 	}
 	else {
-	    return strptr;
+	    index = findSpace();
+	    if (index == -1) {
+		return -1;
+	    }
+	    OpenFile file = Machine.stubFileSystem().open(name, true);
+	    if (file == null) {
+		return -1;
+	    }
+	    fileTable[index] = file;
+	    return index;
 	}
     }
 
+    /**
+    * Returns index of named file in the table, -1 if it doesn't exist
+    */
+    private int findFile(String name) {
+	for (int i = 0; i < 16; i++) {
+	    if (fileTable[i] != null) {
+		if (fileTable[i].getName() == name) {
+		    return i;
+		}
+	    }
+	}
+	return -1;
+    }
+
+    /**
+    * Returns an open index in the file table
+    */
+    private int findSpace() {
+	for (int i = 0; i < 16; i++) {
+	    if (fileTable[i] == null) {
+		return i;
+	    }
+	}
+	return -1;
+    }
+
+    /**
+    * Handle the open() system call.
+    */
     private int handleOpen(int strptr) {
 	String name = readVirtualMemoryString(strptr, 256);
+	int index = findFile(name);
+	if (index != -1) {
+	    return index;
+	}
+	index = findSpace();
+	if (index == -1) {
+	    return -1;
+	}
 	OpenFile file = Machine.stubFileSystem().open(name, false);
 	if (file == null) {
 	    return -1;
 	}
-	else {
-	    return strptr;
-	}
+	fileTable[index] = file;
+	return index;
     }
 
+    /**
+    * Handle the read() system call.
+    */
     private int handleRead(int fileDescriptor, int bufptr, int count) {
-	String filename = readVirtualMemoryString(fileDescriptor, 256);
-	int realcount = 0;
-	byte[] buffer = new byte[count]
-	OpenFile file = Machine.stubFileSystem().open(filename, false)
+	OpenFile file = fileTable[fileDescriptor];
 	if (file == null) {
 	    return -1;
 	}
+	byte[] buffer = new byte[count];
+	int realcount = 0;
 	for (int i = 0; i < count; i++) {
-	    file.read(i, buffer, i, 1);
+	    realcount += file.read(buffer, i, 1);
 	}
 	writeVirtualMemory(bufptr, buffer, 0, count);
+	return realcount;
+    }
+
+    /**
+    * Handle the write() system call.
+    */
+    private int handleWrite(int fileDescriptor, int bufptr, int count) {
+	OpenFile file = fileTable[fileDescriptor];
+	if (file == null) {
+	    return -1;
+	}
+	byte[] buffer = new byte[count];
+	readVirtualMemory(bufptr, buffer, 0, count);
+	int realcount = 0;
+	for (int i = 0; i < count; i++) {
+	    realcount += file.write(buffer, i, 1);
+	}
+	return realcount;
+    }
+
+    /**
+    * Handle the close() system call.
+    */
+    private int handleClose(int fileDescriptor) {
+	OpenFile file = fileTable[fileDescriptor];
+	if (file == null) {
+	    return -1;
+	}
+	file.close();
+	fileTable[fileDescriptor] = null;
+	return 0;
+    }
+
+    /**
+    * Handle the unlink() system call.
+    */
+    private int handleUnlink(int strptr) {
+	String name = readVirtualMemoryString(strptr, 256);
+	boolean worked = Machine.stubFileSystem().remove(name);
+	if (worked) {
+	   return 0;
+	}
+	return -1;
     }
 
     private static final int
@@ -430,8 +524,26 @@ public class UserProcess {
 	case syscallHalt:
 	    return handleHalt();
 
-	case syscallCreat:
-	    return handleCreat(a0);	
+	case syscallExit:
+	    return handleHalt();
+
+	case syscallCreate:
+	    return handleCreat(a0);
+
+	case syscallOpen:
+	    return handleOpen(a0);
+	
+	case syscallRead:
+	    return handleRead(a0, a1, a2);
+
+	case syscallWrite:
+	    return handleWrite(a0, a1, a2);	
+
+	case syscallClose:
+	    return handleClose(a0);
+
+	case syscallUnlink:
+	    return handleUnlink(a0);
 
 	default:
 	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -486,4 +598,6 @@ public class UserProcess {
 	
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
+
+    private OpenFile[] fileTable;
 }
