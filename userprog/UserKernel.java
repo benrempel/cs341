@@ -27,6 +27,11 @@ public class UserKernel extends ThreadedKernel {
 	Machine.processor().setExceptionHandler(new Runnable() {
 		public void run() { exceptionHandler(); }
 	    });
+	freePages = new LinkedList<Integer>();
+	int pageCount = (Machine.processor().getNumPhysPages());
+	for (int i = 0; i < PageCount; i++) {
+	    freePages.add((Integer)i);
+	}
     }
 
     /**
@@ -112,4 +117,7 @@ public class UserKernel extends ThreadedKernel {
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+
+    public LinkedList<Integer> freePages;
+
 }
