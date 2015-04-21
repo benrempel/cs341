@@ -48,15 +48,7 @@ public class UserProcess {
 	return (UserProcess)Lib.constructObject(Machine.getProcessClassName());
     }
 
-    /**        fileTable = new OpenFile[16];
-        fileTable[0] = UserKernel.console.openForReading();
-        fileTable[1] = UserKernel.console.openForWriting();
-        int numPhysPages = Machine.processor().getNumPhysPages();
-        pageTable = new TranslationEntry[numPhysPages];
-        int pageNum;
-        for (int i=0; i<8; i++) {
-            pageNum = UserKernel.freePages.poll();
-            pageTable[i] = new TranslationEntry(i,i, true,false,false,fa
+    /**
      * Execute the specified program with the specified arguments. Attempts to
      * load the program, and then forks a thread to run it.
      *
@@ -149,13 +141,19 @@ public class UserProcess {
 
 	byte[] memory = Machine.processor().getMemory();
 	
-	// for now, just assume that virtual addresses equal physical addresses
-	if (vaddr < 0 || vaddr >= memory.length) {
+	
+	int vpn = vaddr / pageSize;
+	int voffset = vaddr % pageSize;
+	int paddr = pageTable[vpn].ppn*pageSize + voffset;	
+
+	if (paddr < 0 || paddr >= memory.length) {
 	    return 0;
 	}
 
-	int amount = Math.min(length, memory.length-vaddr);
-	System.arraycopy(memory, vaddr, data, offset, amount);
+	
+
+	int amount = Math.min(length, memory.length-paddr);
+	System.arraycopy(memory, paddr, data, offset, amount);
 
 	return amount;
     }
@@ -193,12 +191,15 @@ public class UserProcess {
 
 	byte[] memory = Machine.processor().getMemory();
 	
-	// for now, just assume that virtual addresses equal physical addresses
-	if (vaddr < 0 || vaddr >= memory.length)
+	int vpn = vaddr / pageSize;
+	int voffset = vaddr % pageSize;
+	int paddr = pageTable[vpn].ppn*pageSize + voffset;	
+	
+	if (paddr < 0 || paddr >= memory.length)
 	    return 0;
 
-	int amount = Math.min(length, memory.length-vaddr);
-	System.arraycopy(data, offset, memory, vaddr, amount);
+	int amount = Math.min(length, memory.length-paddr);
+	System.arraycopy(data, offset, memory, paddr, amount);
 
 	return amount;
     }
@@ -241,6 +242,23 @@ public class UserProcess {
 		return false;
 	    }
 	    numPages += section.getLength();
+	}
+
+	int numPhysPages = Machine.processor().getNumPhysPages();
+	pageTable = new TranslationEntry[numPages + stackPages];
+	boolean readonly;
+	for (int i = 0; i < coff.getNumSections(); i++) {
+	    for (int j = 0; j < coff.getSection(i).getLength(); j++) {
+		readonly = coff.getSection(i).isReadOnly();
+		pageTable[coff.getSection(i).getFirstVPN() + j] = new TranslationEntry(coff.getSection(i).getFirstVPN() + i, UserKernel.freePages.poll(), true, readonly, false, false);
+	    }
+	}
+	int pageNum;
+	for (int i=0; i<stackPages+numPages; i++) {
+	    if (pageTable[i] == null) {
+	    	pageNum = UserKernel.freePages.poll();
+	    	pageTable[i] = new TranslationEntry(i, pageNum, true,false,false,false);
+	    }
 	}
 
 	// make sure the argv array will fit in one page
@@ -316,6 +334,7 @@ public class UserProcess {
 		int vpn = section.getFirstVPN()+i;
 
 		// for now, just assume virtual addresses=physical addresses
+		int 
 		section.loadPage(i, vpn);
 	    }
 	}

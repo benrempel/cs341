@@ -246,9 +246,12 @@ public class UserProcess {
 
 	int numPhysPages = Machine.processor().getNumPhysPages();
 	pageTable = new TranslationEntry[numPages + stackPages];
-	boolean readonly = coff.isReadOnly();
-	for (int i = 0; i < numPages; i++) {
-	    pageTable[coff.getFirstVPN() + i] = new TranslationEntry(coff.getFirstVPN() + i, UserKernel.freePages.poll(), true, readonly, false, false);
+	boolean readonly;
+	for (int i = 0; i < coff.getNumSections(); i++) {
+	    for (int j = 0; j < coff.getSection(i).getLength(); j++) {
+		readonly = coff.getSection(i).isReadOnly();
+		pageTable[coff.getSection(i).getFirstVPN() + j] = new TranslationEntry(coff.getSection(i).getFirstVPN() + i, UserKernel.freePages.poll(), true, readonly, false, false);
+	    }
 	}
 	int pageNum;
 	for (int i=0; i<stackPages+numPages; i++) {
@@ -330,8 +333,7 @@ public class UserProcess {
 	    for (int i=0; i<section.getLength(); i++) {
 		int vpn = section.getFirstVPN()+i;
 
-		// for now, just assume virtual addresses=physical addresses
-		section.loadPage(i, vpn);
+		section.loadPage(i, pageTable[vpn].ppn);
 	    }
 	}
 	
@@ -386,26 +388,19 @@ public class UserProcess {
 	if (index != -1) {
 	    return index;
 	}
-	else {
-	    index = findSpace();        fileTable = new OpenFile[16];
+	index = findSpace();
+        fileTable = new OpenFile[16];
         fileTable[0] = UserKernel.console.openForReading();
         fileTable[1] = UserKernel.console.openForWriting();
-        int numPhysPages = Machine.processor().getNumPhysPages();
-        pageTable = new TranslationEntry[numPhysPages];
-        int pageNum;
-        for (int i=0; i<8; i++) {
-            pageNum = UserKernel.freePages.poll();
-            pageTable[i] = new TranslationEntry(i,i, true,false,false,fa
-	    if (index == -1) {
-		return -1;
-	    }
-	    OpenFile file = Machine.stubFileSystem().open(name, true);
-	    if (file == null) {
-		return -1;
-	    }
-	    fileTable[index] = file;
-	    return index;
+	if (index == -1) {
+	    return -1;
 	}
+	OpenFile file = Machine.stubFileSystem().open(name, true);
+	if (file == null) {
+	    return -1;
+	}
+	fileTable[index] = file;
+	return index;
     }
 
     /**
