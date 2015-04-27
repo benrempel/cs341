@@ -23,6 +23,10 @@ public class UserProcess {
      * Allocate a new process.
      */
     public UserProcess() {
+	this.pid = nextpid;
+	nextpid++;
+	this.ppid = -1;
+	UserKernel.addToProcessTable(pid, this);
 	fileTable = new OpenFile[16];
 	fileTable[0] = UserKernel.console.openForReading();
 	fileTable[1] = UserKernel.console.openForWriting();
@@ -63,6 +67,10 @@ public class UserProcess {
 	new UThread(this).setName(name).fork();
 
 	return true;
+    }
+
+    public int getPid() {
+	return pid;
     }
 
     /**
@@ -364,13 +372,14 @@ public class UserProcess {
 	processor.writeRegister(Processor.regPC, initialPC);
 	processor.writeRegister(Processor.regSP, initialSP);
 
-	// initialize the first two argument registers to argc and argv
+	// initialize theString[] args first two argument registers to argc and argv
 	processor.writeRegister(Processor.regA0, argc);
 	processor.writeRegister(Processor.regA1, argv);
     }
 
     /**
-     * Handle the halt() system call. 
+     * Handl
+e the halt() system call. 
      */
     private int handleHalt() {
 	Machine.halt();
@@ -509,6 +518,43 @@ public class UserProcess {
 	return -1;
     }
 
+    private String[] getargv(int argc, int argvptr) {
+	byte[][] storage = new byte[argc][4];
+	for (int i = 0; i < argc; i++) {
+	    readVirtualMemory(argvptr + 4i, storage[i]);
+	}
+	int[] addresses = new int[argc];
+	for (int i = 0; i < argc; i++) {
+	    addresses[i] = Machine.Lib.bytesToInt(storage[i], 0);
+	}
+	String[] argv = new String[argc];
+	for (int i = 0; i < argc; i++) {
+	    argv[i] = readVirtualMemoryString(addresses[i], 256);
+	}
+	return argv;
+    }
+
+    /**
+    * Handle the exec() system call.
+    */
+    private int handleExec(int fpointer, int argc, int argvptr) {
+	UserProcess newprocess = new UserProcess();
+	newprocess.ppid = this.pid;
+	String name = readVirtualMemoryString(fpointer, 256);
+	String[] argv = getargv(argc, argvptr);
+	if (!newprocess.execute(name, argv)) {
+	    return -1;
+	}
+	return newprocess.getPid();
+    }
+
+    /**
+    * Handle the join() system call.
+    */
+    private int handleJoin(int processId, int statusptr) {
+	if (
+    }
+
     private static final int
         syscallHalt = 0,
 	syscallExit = 1,
@@ -575,6 +621,12 @@ public class UserProcess {
 	case syscallUnlink:
 	    return handleUnlink(a0);
 
+	case syscallExec:
+	    return handleExec(a0, a1, a2);
+
+	case syscallJoin:
+	    return handleJoin(a0, a1);
+
 	default:
 	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 	    Lib.assertNotReached("Unknown system call!");
@@ -612,6 +664,10 @@ public class UserProcess {
 	}
     }
 
+    public setThread(UThread thread) {
+	this.thread = thread;
+    }
+
     /** The program being run by this process. */
     protected Coff coff;
 
@@ -623,9 +679,16 @@ public class UserProcess {
     /** The number of pages in the program's stack. */
     protected final int stackPages = 8;
     
+    private UThread thread;
+
+    private int ppid;
+    private int pid;
+
     private int initialPC, initialSP;
     private int argc, argv;
 	
+    private static int nextpid;
+
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
 

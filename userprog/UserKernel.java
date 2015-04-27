@@ -33,6 +33,7 @@ public class UserKernel extends ThreadedKernel {
 	for (int i = 0; i < pageCount; i++) {
 	    freePages.add((Integer)i);
 	}
+	processTable = new Hashtable();
     }
 
     /**
@@ -113,11 +114,21 @@ public class UserKernel extends ThreadedKernel {
 	super.terminate();
     }
 
+    public void addToProcessTable(int pid, UserProcess process) {
+	processTable.put((Integer)pid, process);
+    }
+
+    public UserProcess getProcess(int pid) {
+	return processTable.get(pid);
+    }
+
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+
+    private static Hashtable<Integer, UserProcess> processTable;
 
     public static LinkedList<Integer> freePages;
 
