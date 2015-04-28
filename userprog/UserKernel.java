@@ -114,11 +114,11 @@ public class UserKernel extends ThreadedKernel {
 	super.terminate();
     }
 
-    public void addToProcessTable(int pid, UserProcess process) {
+    public static void addToProcessTable(int pid, UserProcess process) {
 	processTable.put((Integer)pid, process);
     }
 
-    public UserProcess getProcess(int pid) {
+    public static UserProcess getProcess(int pid) {
 	return processTable.get(pid);
     }
 

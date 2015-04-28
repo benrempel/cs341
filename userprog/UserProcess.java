@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.util.*;
 
 /**
  * Encapsulates the state of a user process that is not contained in its
@@ -23,6 +24,7 @@ public class UserProcess {
      * Allocate a new process.
      */
     public UserProcess() {
+	children = new ArrayList<UserProcess>();
 	this.pid = nextpid;
 	nextpid++;
 	this.ppid = -1;
@@ -382,7 +384,10 @@ public class UserProcess {
 e the halt() system call. 
      */
     private int handleHalt() {
+	if (pid == 0) {
 	Machine.halt();
+	}
+	handleExit(-1);
 	
 	Lib.assertNotReached("Machine.halt() did not halt machine!");
 	return 0;
@@ -521,11 +526,11 @@ e the halt() system call.
     private String[] getargv(int argc, int argvptr) {
 	byte[][] storage = new byte[argc][4];
 	for (int i = 0; i < argc; i++) {
-	    readVirtualMemory(argvptr + 4i, storage[i]);
+	    readVirtualMemory(argvptr + 4*i, storage[i]);
 	}
 	int[] addresses = new int[argc];
 	for (int i = 0; i < argc; i++) {
-	    addresses[i] = Machine.Lib.bytesToInt(storage[i], 0);
+	    addresses[i] = Lib.bytesToInt(storage[i], 0);
 	}
 	String[] argv = new String[argc];
 	for (int i = 0; i < argc; i++) {
@@ -539,12 +544,13 @@ e the halt() system call.
     */
     private int handleExec(int fpointer, int argc, int argvptr) {
 	UserProcess newprocess = new UserProcess();
-	newprocess.ppid = this.pid;
+	newprocess.setPPID(this.pid);
 	String name = readVirtualMemoryString(fpointer, 256);
 	String[] argv = getargv(argc, argvptr);
 	if (!newprocess.execute(name, argv)) {
 	    return -1;
 	}
+	this.children.add(newprocess);
 	return newprocess.getPid();
     }
 
@@ -552,7 +558,43 @@ e the halt() system call.
     * Handle the join() system call.
     */
     private int handleJoin(int processId, int statusptr) {
-	if (
+	statusaddr = statusptr;
+	UserProcess child = UserKernel.getProcess(processId);	
+	if (child.getPPID() != this.pid) {
+	    return -1;
+	}
+	UThread childThread = child.getThread();
+	if (childThread != null) {
+	    childThread.join();
+	}
+	return 1;
+    }
+
+    /**
+    * Handle the exit() system call.
+    */
+    private void handleExit(int status) {
+	if (pid == 0) {
+	    handleHalt();
+	}
+	for (int i = 0; i < fileTable.length; i++) {
+	    if (fileTable[i] != null) {
+		fileTable[i].close();
+	    }
+	}
+	UserProcess child;
+	Iterator<UserProcess> iterator = children.iterator();
+	while (iterator.hasNext()) {
+	    child = iterator.next();
+	    child.setPPID(-1);
+	}
+	for (int i = 0; i < pageTable.length; i++) {
+	    UserKernel.freePages.add(pageTable[i].ppn);
+	}
+	if (joinedProcess != null) {
+	   this.joinedProcess.writeStatus(status);
+	}
+	this.thread.finish();
     }
 
     private static final int
@@ -601,7 +643,8 @@ e the halt() system call.
 	    return handleHalt();
 
 	case syscallExit:
-	    return handleHalt();
+	    handleExit(a0);
+	    return 0;
 
 	case syscallCreate:
 	    return handleCreat(a0);
@@ -663,9 +706,29 @@ e the halt() system call.
 	    Lib.assertNotReached("Unexpected exception");
 	}
     }
-
-    public setThread(UThread thread) {
+    public void setThread(UThread thread) {
 	this.thread = thread;
+    }
+
+    public UThread getThread() {
+	return this.thread;
+    }
+
+    public int getPPID() {
+	return ppid;
+    }
+
+    public void setPPID(int blah) {
+	this.ppid = blah;
+    }
+
+    public UserProcess getJoinedProcess() {
+	return joinedProcess;
+    }
+
+    public void writeStatus(int status) {
+	byte[] statusbytes = Lib.bytesFromInt(status);
+	writeVirtualMemory(statusaddr, statusbytes);
     }
 
     /** The program being run by this process. */
@@ -679,7 +742,13 @@ e the halt() system call.
     /** The number of pages in the program's stack. */
     protected final int stackPages = 8;
     
+    private int statusaddr;
+
     private UThread thread;
+
+    private UserProcess joinedProcess;
+
+    private ArrayList<UserProcess> children;
 
     private int ppid;
     private int pid;
@@ -687,7 +756,7 @@ e the halt() system call.
     private int initialPC, initialSP;
     private int argc, argv;
 	
-    private static int nextpid;
+    private static int nextpid = 0;
 
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
