@@ -5,6 +5,8 @@ import nachos.threads.*;
 import nachos.userprog.*;
 import nachos.vm.*;
 
+import java.util.*;
+
 /**
  * A kernel that can support multiple demand-paging user processes.
  */
@@ -48,4 +50,6 @@ public class VMKernel extends UserKernel {
     private static VMProcess dummy1 = null;
 
     private static final char dbgVM = 'v';
+
+    private static HashTable<Long, TranslationEntry> GIPT;
 }

@@ -61,6 +61,13 @@ public class VMProcess extends UserProcess {
 	Processor processor = Machine.processor();
 
 	switch (cause) {
+	case Machine.Processor.exceptionTLBMiss:
+            int badvaddr = machine.Processor().readRegister(Processor.regBadVaddr);
+            long keything = badvaddr << 32;
+            keything += pid;
+            TranslationEntry entry = VMKernel.GIPT.get(keything);
+            //handle the case where it's there but invalid here
+            machine.Processor.writeTLBEntry(machine.Processor.getTLBSize(), entry);
 	default:
 	    super.handleException(cause);
 	    break;
