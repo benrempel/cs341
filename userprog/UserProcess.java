@@ -751,7 +751,7 @@ e the halt() system call.
     private ArrayList<UserProcess> children;
 
     private int ppid;
-    private int pid;
+    protected int pid;
 
     private int initialPC, initialSP;
     private int argc, argv;

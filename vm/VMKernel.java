@@ -51,5 +51,5 @@ public class VMKernel extends UserKernel {
 
     private static final char dbgVM = 'v';
 
-    private static HashTable<Long, TranslationEntry> GIPT;
+    public static Hashtable<Long, TranslationEntry> GIPT;
 }

@@ -14,6 +14,7 @@ public class VMProcess extends UserProcess {
      */
     public VMProcess() {
 	super();
+        TLBIndex = 0;
     }
 
     /**
@@ -21,7 +22,9 @@ public class VMProcess extends UserProcess {
      * Called by <tt>UThread.saveState()</tt>.
      */
     public void saveState() {
-	super.saveState();
+	for (int i = 0; i < Machine.processor().getTLBSize(); i++) {
+            Machine.processor().readTLBEntry(i).valid = false;
+        }
     }
 
     /**
@@ -49,6 +52,33 @@ public class VMProcess extends UserProcess {
 	super.unloadSections();
     }    
 
+    public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
+        int val = super.readVirtualMemory(vaddr, data, offset, length);
+        if (getTLBEntryFromVaddr(vaddr) != -1) {
+            Machine.processor().readTLBEntry(i).used = true;
+        }
+        return val;
+    }
+
+    // DO THE SAME THING FOR WRITEVIRTUALMEMORY
+
+    long getKeyFromVaddr(int vaddr) {
+        long key = vaddr << 32;
+        key += pid;
+        return key;
+    }
+
+    private TranslationEntry getTLBEntryFromVaddr(int vaddr) {
+        long key = getKeyFromVaddr(vaddr);
+        int vpn = VMKernel.GIPT.get(key).vpn;
+        for (int i = 0; i < Machine.processor().getTLBSize(), i++) {
+            if (Machine.processor().readTLBEntry(i).vpn = vpn) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /**
      * Handle a user exception. Called by
      * <tt>UserKernel.exceptionHandler()</tt>. The
@@ -61,20 +91,37 @@ public class VMProcess extends UserProcess {
 	Processor processor = Machine.processor();
 
 	switch (cause) {
-	case Machine.Processor.exceptionTLBMiss:
-            int badvaddr = machine.Processor().readRegister(Processor.regBadVaddr);
+	case Processor.exceptionTLBMiss:
+            int badvaddr = processor.readRegister(Processor.regBadVAddr);
             long keything = badvaddr << 32;
             keything += pid;
             TranslationEntry entry = VMKernel.GIPT.get(keything);
-            //handle the case where it's there but invalid here
-            machine.Processor.writeTLBEntry(machine.Processor.getTLBSize(), entry);
+            int place = findEntryInTLB(entry);
+            if (place != -1) {
+                processor.writeTLBEntry(place, entry);
+            }
+            else {
+                processor.writeTLBEntry(TLBIndex%processor.getTLBSize(), entry);
+                TLBIndex++;
+            }
+            break;
 	default:
 	    super.handleException(cause);
 	    break;
 	}
     }
+
+    private int findEntryInTLB(TranslationEntry entry) {
+        for (int i = 0; i < Machine.processor().getTLBSize(); i++) {
+            if (Machine.processor().readTLBEntry(i).ppn == entry.ppn) {
+                return i;
+            }  
+        }
+        return -1;
+    }
 	
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
     private static final char dbgVM = 'v';
+    private static int TLBIndex;
 }
