@@ -224,7 +224,7 @@ public class UserProcess {
      * @param	args	the arguments to pass to the executable.
      * @return	<tt>true</tt> if the executable was successfully loaded.
      */
-    private boolean load(String name, String[] args) {
+    public boolean load(String name, String[] args) {
 	Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
 	
 	OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
@@ -309,8 +309,7 @@ public class UserProcess {
 	    byte[] stringOffsetBytes = Lib.bytesFromInt(stringOffset);
 	    Lib.assertTrue(writeVirtualMemory(entryOffset,stringOffsetBytes) == 4);
 	    entryOffset += 4;
-	    Lib.assertTrue(writeVirtualMemory(stringOffset, argv[i]) ==
-		       argv[i].length);
+	    Lib.assertTrue(writeVirtualMemory(stringOffset, argv[i]) == argv[i].length);
 	    stringOffset += argv[i].length;
 	    Lib.assertTrue(writeVirtualMemory(stringOffset,new byte[] { 0 }) == 1);
 	    stringOffset += 1;

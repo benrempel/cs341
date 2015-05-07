@@ -34,36 +34,6 @@ public class VMProcess extends UserProcess {
     public void restoreState() {
     }
 
-    public boolean load(String name, String[] args) {
-        boolean val = super.load(name, args);
-        if (!val) {
-            return false;
-        } 
-        int numPhysPages = Machine.processor().getNumPhysPages();
-        boolean readonly;
-        long key;
-        TranslationEntry entry;
-        for (int i = 0; i < coff.getNumSections(); i++) {
-            for (int j = 0; j < coff.getSection(i).getLength(); j++) {
-                readonly = coff.getSection(i).isReadOnly();
-                key = getKeyFromVaddr(Machine.processor().makeAddress(coff.getSection(i).getFirstVPN() + j, 0));
-                entry = new TranslationEntry(coff.getSection(i).getFirstVPN() + i, VMKernel.freePages.poll(), true,  readonly,  false, false);
-                VMKernel.GIPT.put(key, entry);
-            }
-        }
-
-        int pageNum;
-        for (int i = 0; i < stackPages + numPages; i++) {
-            key = getKeyFromVaddr(Machine.processor().makeAddress(i, 0));
-            if (!VMKernel.GIPT.containsKey(key)) {
-                pageNum = UserKernel.freePages.poll();
-                entry = new TranslationEntry(i, pageNum, true, false, false, false);
-                VMKernel.GIPT.put(key, entry);
-            }
-        }
-        return val;
-    }
-
     /**
      * Initializes page tables for this process so that the executable can be
      * demand-paged.
@@ -72,26 +42,13 @@ public class VMProcess extends UserProcess {
      */
     protected boolean loadSections() {
        if (numPages > Machine.processor().getNumPhysPages()) {
-	    coff.close();
-	    Lib.debug(dbgProcess, "\tinsufficient physical memory");
-	    return false;
-	}
-
-	// load sections
-	for (int s=0; s<coff.getNumSections(); s++) {
-	    CoffSection section = coff.getSection(s);
-	    
-	    Lib.debug(dbgProcess, "\tinitializing " + section.getName()
-		      + " section (" + section.getLength() + " pages)");
-
-	    for (int i=0; i<section.getLength(); i++) {
-		int vpn = section.getFirstVPN()+i;
-
-		section.loadPage(i, pageTable[vpn].ppn);
-	    }
-	}
-	
-	return true;
+            coff.close();
+            Lib.debug(dbgProcess, "\tinsufficient physical memory");
+            return false;
+        }
+        else {
+            
+        }
     }
 
     /**
